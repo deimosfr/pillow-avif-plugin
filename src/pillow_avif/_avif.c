@@ -734,9 +734,7 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
     }
 
 end:
-    if (&rgb) {
-        avifRGBImageFreePixels(&rgb);
-    }
+    avifRGBImageFreePixels(&rgb);
     if (!self->first_frame) {
         avifImageDestroy(frame);
     }

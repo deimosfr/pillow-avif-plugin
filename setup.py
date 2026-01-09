@@ -14,7 +14,7 @@ def version():
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             (target,) = node.targets
             if isinstance(target, ast.Name) and target.id == "__version__":
-                return node.value.s
+                return node.value.value if hasattr(node.value, "value") else node.value.s
 
 
 def readme():
@@ -29,6 +29,31 @@ IS_DEBUG = hasattr(sys, "gettotalrefcount")
 PLATFORM_MINGW = os.name == "nt" and "GCC" in sys.version
 
 libraries = ["avif"]
+include_dirs = []
+library_dirs = []
+
+
+def pkg_config(name):
+    try:
+        import subprocess
+
+        command = ["pkg-config", "--cflags", "--libs", name]
+        output = subprocess.check_output(command).decode("utf-8").strip()
+        flags = output.split()
+        return flags
+    except (OSError, subprocess.CalledProcessError):
+        return []
+
+
+# Try to use pkg-config to find libavif
+avif_flags = pkg_config("libavif")
+
+for flag in avif_flags:
+    if flag.startswith("-I"):
+        include_dirs.append(flag[2:])
+    elif flag.startswith("-L"):
+        library_dirs.append(flag[2:])
+
 if sys.platform == "win32":
     libraries.extend(
         [
@@ -61,6 +86,8 @@ setup(
             ["src/pillow_avif/_avif.c"],
             depends=["avif/avif.h"],
             libraries=libraries,
+            include_dirs=include_dirs,
+            library_dirs=library_dirs,
         ),
     ],
     package_data={"": ["README.rst"]},
